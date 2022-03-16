@@ -8,6 +8,7 @@
 #include <QDebug>
 #include <qnamespace.h>
 #include <qsize.h>
+#include <qtextcursor.h>
 
 Terminal::Terminal() : pty(nullptr){
     setAutoFillBackground(true);
@@ -50,15 +51,54 @@ void Terminal::updateTerminal() {
     QString str = "";
     if(pty->read(str) && str.length() > 0) {
         //qDebug() << str << "\n";
-        qDebug() << (int)str.toStdString()[0] << "\n";
-        if(str[0] == 0x08) {
-            textCursor().deletePreviousChar();
+        //qDebug() << (int)str.toStdString()[0] << "\n";
+        // for(auto ch : str) {
+        //     qDebug() << (int)ch.toLatin1() << " ";
+        // }
+        // qDebug() << "\n";
+        // if(str[0] == 0x08) {
+        //     qDebug() << 0x08 << "\n";
+        //     textCursor().deletePreviousChar();
 
-        } else if(str[0] == 0x07) {
-            // bell
-        } else {
-            insertPlainText(str);
+        // } else if(str[0] == 0x07) {
+        //     // bell
+        // } else {
+        //     qDebug() << str << (int)str.toStdString()[0] << "\n";
+        //     insertPlainText(str);
+        // }
+        auto tc = textCursor();
+        for(auto ch : str) {
+            printf("ch: %c %d\n", ch.toLatin1(), (int)ch.toLatin1());
+            if(ch == 127) {
+                qDebug("delete!\n");
+                
+                tc.movePosition(QTextCursor::MoveOperation::Left);
+                
+                textCursor().deletePreviousChar();
+            } else if(ch == 0x08) {
+                printf("Left!\n");
+                
+                tc.movePosition(QTextCursor::MoveOperation::Left);
+                setTextCursor(tc);
+                continue;
+            } else if(ch == '\a') {
+                //do nothing
+                continue;
+            }
+            //insertPlainText(ch);
+            if(!textCursor().atEnd()) {
+                //printf("not at end! insert %d", (int)ch.toLatin1());
+                tc.movePosition(QTextCursor::MoveOperation::Right);
+                tc.deletePreviousChar();
+                tc.insertText(ch);
+                setTextCursor(tc);
+            } else {
+                //printf("at end! insert %d", (int)ch.toLatin1());
+                textCursor().insertText(ch);
+                setTextCursor(tc);
+            }
         }
+        setTextCursor(tc);
     }
 }
 
