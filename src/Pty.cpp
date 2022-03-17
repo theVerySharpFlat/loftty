@@ -5,10 +5,12 @@
 #include "Pty.h"
 
 #include <asm-generic/ioctls.h>
+#include <cstddef>
 #include <cstdlib>
 #include <qglobal.h>
 #include <sys/ioctl.h>
 #include <sys/poll.h>
+#include <termios.h>
 #include <unistd.h>
 #include <pty.h>
 #include <fcntl.h>
@@ -20,11 +22,17 @@ Pty::Pty(unsigned short width, unsigned short height, const char* shell)
     : m_name(nullptr), m_master(-1), m_slave(-1){
 
     winsize winOps = {
-        height,
-        width,
-        0, 0 // unused
+        height, // rows
+        width,  // columns
+        0, 0    // unneeded
     };
-    openpty(&m_master, &m_slave, m_name, NULL, &winOps);
+
+    ::openpty(&m_master, &m_slave, m_name, NULL, &winOps);
+
+    termios termOps;
+    ::tcgetattr(m_master, &termOps);
+    termOps.c_iflag &= IUTF8;
+    ::tcsetattr(m_master, TCSANOW, &termOps);
 
     pid_t pid = fork();
     if(pid == -1) {
@@ -58,8 +66,6 @@ Pty::Pty(unsigned short width, unsigned short height, const char* shell)
 
     } else { // parent
         close(m_slave);
-        // int flags = fcntl(m_master, F_GETFL, 0);
-        // fcntl(m_master, flags | O_NONBLOCK);
     }
 }
 
@@ -68,13 +74,11 @@ bool Pty::read(QString& str) {
     int bytesToRead;
     if(!::ioctl(m_master, TIOCINQ, &bytesToRead)) { // TIOCOUTQ finds the number of bytes in the buffer to read
         if(bytesToRead) {
-            //printf("%d bytes\n", bytesToRead);
-            str.resize(bytesToRead);
             char* data = (char*)alloca(bytesToRead + 1);
             ::read(m_master, data, bytesToRead);
             data[bytesToRead] = 0x00;
             
-            str = QString::fromLocal8Bit(data);
+            str = QString::fromUtf8(data);
 
             return true;
         }
@@ -87,22 +91,16 @@ bool Pty::read(QString& str) {
 }
 
 void Pty::write(const QString& data) {
-    //printf("write! %d\n", data.toLocal8Bit().length());
-    //printf("%s\n", data.toLocal8Bit().data());
-    ::write(m_master, data.toLocal8Bit().data(), data.toLocal8Bit().length());
+    ::write(m_master, data.toUtf8().data(), data.toUtf8().size());
 }
 
 void Pty::resize(unsigned short width, unsigned short height) {
-    //printf("(%hu, %hu)\n", height, width);
+    
     struct winsize ws {
         height, width, 
         0, 0
     };
     ::ioctl(m_master, TIOCSWINSZ, &ws);
-
-    struct winsize wsi;
-    ::ioctl(m_master, TIOCGWINSZ, &wsi);
-    //printf("(%hu, %hu) + (%hu, %hu)\n", ws.ws_col, ws.ws_row, ws.ws_xpixel, ws.ws_ypixel);
 }
 
 Pty::~Pty() {

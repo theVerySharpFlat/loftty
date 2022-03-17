@@ -16,8 +16,8 @@ public:
     ~Terminal();
 
     void keyPressEvent(QKeyEvent *e) override;
-    // void mousePressEvent(QMouseEvent *e) override;
-    // void mouseReleaseEvent(QMouseEvent *e) override;
+    void mousePressEvent(QMouseEvent *e) override;
+    void mouseReleaseEvent(QMouseEvent *e) override;
     void resizeEvent(QResizeEvent *e) override;
 
     void moveCursorLeft();

@@ -15,10 +15,9 @@
 #include <QScrollBar>
 
 Terminal::Terminal() : pty(nullptr){
-    setAutoFillBackground(true);
-
     resize(QSize(400, 300));
 
+    setAutoFillBackground(true);
     QPalette pal = palette();
     pal.setColor(QPalette::Base, Qt::black);
     pal.setColor(QPalette::Text, Qt::white);
@@ -26,17 +25,15 @@ Terminal::Terminal() : pty(nullptr){
 
     setFrameStyle(QFrame::NoFrame);
 
-    //viewport()->setCursor(Qt::CursorShape::BlankCursor);
     auto font = QFont("Monospace");
     font.setStyleHint(QFont::TypeWriter);
     setFont(font);
     setFontPointSize(10);
 
-    //setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setHorizontalScrollBarPolicy(Qt::ScrollBarPolicy::ScrollBarAlwaysOff);
-    //horizontalScrollBar()->setEnabled(false);
+    horizontalScrollBar()->setEnabled(false);
 
-    //setReadOnly(true);
+    setReadOnly(true);
 
     moveCursor(QTextCursor::End);
 
@@ -61,11 +58,8 @@ Terminal::~Terminal() {
 void Terminal::updateTerminal() {
     QString str = "";
     if(pty->read(str) && str.length() > 0) {
-        //printf("str: %s\n", str.toLatin1().data());
         for(auto ch : str) {
-            //printf("ch: %c %d\n", ch.toLatin1(), (int)ch.toLatin1());
             if(ch == 0x08) {
-                //printf("Left!\n");
                 moveCursorLeft();
                 continue;
 
@@ -84,13 +78,11 @@ void Terminal::updateTerminal() {
                 replaceCharWith('\n');
             }
             replaceCharWith(ch);
-            //printf("position: %d\n", textCursor().columnNumber());
         }
     }
 }
 
 void Terminal::keyPressEvent(QKeyEvent *e) {
-   // printf("colum number: %d\n", textCursor().columnNumber()+1);
     if(textCursor().columnNumber() + 1 >= getWidth()) {
         replaceCharWith('\n');
     }
@@ -104,7 +96,6 @@ void Terminal::keyPressEvent(QKeyEvent *e) {
 
     if(e->key() == Qt::Key_Backspace) {
         pty->write("\b");
-        //moveCursor(QTextCursor::MoveOperation::Left);
     }
 
     switch (e->key()) {
@@ -116,10 +107,8 @@ void Terminal::keyPressEvent(QKeyEvent *e) {
             break;
         case Qt::Key_Down:
             moveCursorDown();
-            //moveCursorToBeginning();
             break;
     }
-    //QTextEdit::keyPressEvent(e);
 }
 
 void Terminal::resizeEvent(QResizeEvent* e) {
@@ -129,13 +118,13 @@ void Terminal::resizeEvent(QResizeEvent* e) {
     );
 }
 
-// void Terminal::mousePressEvent(QMouseEvent *e) {
-//     //disable mouse
-// }
+void Terminal::mousePressEvent(QMouseEvent *e) {
+    //disable mouse
+}
 
-// void Terminal::mouseReleaseEvent(QMouseEvent *e) {
-//     // disable mouse
-// }
+void Terminal::mouseReleaseEvent(QMouseEvent *e) {
+    // disable mouse
+}
 
 void Terminal::moveCursorLeft() {
     auto tc = textCursor();
