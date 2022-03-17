@@ -7,6 +7,7 @@
 #include <asm-generic/ioctls.h>
 #include <cstdlib>
 #include <qglobal.h>
+#include <sys/ioctl.h>
 #include <sys/poll.h>
 #include <unistd.h>
 #include <pty.h>
@@ -89,6 +90,19 @@ void Pty::write(const QString& data) {
     //printf("write! %d\n", data.toLocal8Bit().length());
     //printf("%s\n", data.toLocal8Bit().data());
     ::write(m_master, data.toLocal8Bit().data(), data.toLocal8Bit().length());
+}
+
+void Pty::resize(unsigned short width, unsigned short height) {
+    //printf("(%hu, %hu)\n", height, width);
+    struct winsize ws {
+        height, width, 
+        0, 0
+    };
+    ::ioctl(m_master, TIOCSWINSZ, &ws);
+
+    struct winsize wsi;
+    ::ioctl(m_master, TIOCGWINSZ, &wsi);
+    //printf("(%hu, %hu) + (%hu, %hu)\n", ws.ws_col, ws.ws_row, ws.ws_xpixel, ws.ws_ypixel);
 }
 
 Pty::~Pty() {

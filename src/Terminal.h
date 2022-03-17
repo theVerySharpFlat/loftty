@@ -6,6 +6,7 @@
 #define TERMINAL_TERMINAL_H
 
 #include <QTextEdit>
+#include <qevent.h>
 #include "Pty.h"
 
 class Terminal :  public QTextEdit{
@@ -15,8 +16,19 @@ public:
     ~Terminal();
 
     void keyPressEvent(QKeyEvent *e) override;
-    void mousePressEvent(QMouseEvent *e) override;
-    void mouseReleaseEvent(QMouseEvent *e) override;
+    // void mousePressEvent(QMouseEvent *e) override;
+    // void mouseReleaseEvent(QMouseEvent *e) override;
+    void resizeEvent(QResizeEvent *e) override;
+
+    void moveCursorLeft();
+    void moveCursorRight();
+    void moveCursorDown();
+    void moveCursorToBeginning();
+
+    void replaceCharWith(QChar ch);
+
+    unsigned short getWidth();
+    unsigned short getHeight();
 private slots:
      void updateTerminal();
 private:

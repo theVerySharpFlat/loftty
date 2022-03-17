@@ -15,6 +15,8 @@ public:
     bool read(QString& str);
     void write(const QString& data);
 
+    void resize(unsigned short width, unsigned short height);
+
 private:
     int m_master;
     int m_slave;
