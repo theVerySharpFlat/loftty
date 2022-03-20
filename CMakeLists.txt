@@ -13,7 +13,7 @@ find_package(Qt5 COMPONENTS
         Widgets
         REQUIRED)
 
-add_executable(terminal src/main.cpp src/Terminal.cpp src/Pty.cpp)
+add_executable(terminal src/main.cpp src/Terminal.cpp src/Pty.cpp src/Emulator.cpp)
 target_link_libraries(terminal
         Qt5::Core
         Qt5::Gui

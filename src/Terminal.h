@@ -9,9 +9,13 @@
 #include <qevent.h>
 #include "Pty.h"
 
+class Emulator;
+
 class Terminal :  public QTextEdit{
     Q_OBJECT
 public:
+    friend class Emulator;
+
     explicit Terminal();
     ~Terminal();
 
@@ -23,7 +27,16 @@ public:
     void moveCursorLeft();
     void moveCursorRight();
     void moveCursorDown();
-    void moveCursorToBeginning();
+    void moveCursorToBeginningOfLine();
+    void moveCursorToEndOfLine();
+    void moveCursorToEnd();
+    void moveToLine(int line, bool moveAnchor);
+
+    void deleteLine(int line);
+
+    void clearFromCursorToEnd();
+    void clearFromCursorToBeginning(bool deleteNewlines = false);
+    void clearAll();
 
     void replaceCharWith(QChar ch);
 
@@ -32,8 +45,8 @@ public:
 private slots:
      void updateTerminal();
 private:
-
-    Pty* pty;
+    Emulator* m_emulator;
+    Pty* m_pty;
 
 };
 
