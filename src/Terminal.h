@@ -38,6 +38,12 @@ public:
     void clearFromCursorToBeginning(bool deleteNewlines = false);
     void clearAll();
 
+    struct TextFormat {
+        unsigned int fg;
+        unsigned int bg;
+    };
+    inline TextFormat& getTextFormat() { return m_textFormat; }
+
     void replaceCharWith(QChar ch);
 
     unsigned short getWidth();
@@ -48,6 +54,15 @@ private:
     Emulator* m_emulator;
     Pty* m_pty;
 
+    constexpr static const TextFormat defaultTextFormat {
+        0xffffff,
+        0x000000
+    };
+
+    TextFormat m_textFormat{
+        defaultTextFormat.fg,
+        defaultTextFormat.bg
+    };
 };
 
 

@@ -15,6 +15,9 @@ public:
 private:
     void parseCSI(const QStringRef& str);
 
+    void parseSGR(const QStringRef& str);
+    void parseColorOp(const QStringRef& str, int op);
+
     Terminal* m_terminal;
 };
 
