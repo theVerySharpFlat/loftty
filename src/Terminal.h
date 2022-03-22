@@ -8,6 +8,7 @@
 #include <QTextEdit>
 #include <qevent.h>
 #include "Pty.h"
+#include <qdebug.h>
 
 class Emulator;
 
@@ -38,11 +39,33 @@ public:
     void clearFromCursorToBeginning(bool deleteNewlines = false);
     void clearAll();
 
+    enum TextFormatOp {
+        Bold = 0,
+        Faint,
+        Italic,
+        Underlined,
+        Strikethrough,
+        InvertedColors,
+    };
+
     struct TextFormat {
         unsigned int fg;
         unsigned int bg;
+        unsigned int format;
     };
     inline TextFormat& getTextFormat() { return m_textFormat; }
+    inline void setTextOp(TextFormatOp op, bool val) {
+        if(val) {
+            m_textFormat.format |= 1 << (int) op;
+        } else {
+            m_textFormat.format &= ~(1 << (int) op);
+        }
+        qDebug() << "FORMAT: " << bin << m_textFormat.format;
+    }
+    inline bool getTextOp(TextFormatOp op) const {
+        //qDebug() << "RET: " << bin << (m_textFormat.format & (1 << (int) op));
+        return (bool)(m_textFormat.format & (1 << (int) op));
+    }
 
     void replaceCharWith(QChar ch);
 
@@ -56,7 +79,8 @@ private:
 
     constexpr static const TextFormat defaultTextFormat {
         0xffffff,
-        0x000000
+        0x000000,
+        0x00000000
     };
 
     TextFormat m_textFormat{

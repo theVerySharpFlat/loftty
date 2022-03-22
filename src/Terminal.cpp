@@ -158,8 +158,8 @@ void Terminal::replaceCharWith(QChar ch) {
 
     auto charFormat = tc.charFormat();
     charFormat.setForeground(QBrush(QColor((unsigned int)0xff000000 + m_textFormat.fg)));
-    //qDebug() << "COLOR: " << hex <<  (unsigned int)0xff000000 + m_textFormat.fg;
     charFormat.setBackground(QBrush(QColor((unsigned int)0xff000000 + m_textFormat.bg)));
+    charFormat.setFontItalic(getTextOp(Italic));
     tc.setCharFormat(charFormat);
 
     if(!textCursor().atEnd()) {

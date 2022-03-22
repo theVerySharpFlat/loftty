@@ -405,6 +405,10 @@ void Emulator::parseSGR(const QStringRef &str) {
         case 0:
             m_terminal->getTextFormat() = Terminal::defaultTextFormat;
             break;
+        case 3:
+            qDebug() << "italic!";
+            m_terminal->setTextOp(Terminal::Italic, true);
+            break;
     }
 }
 
