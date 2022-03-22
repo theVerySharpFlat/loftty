@@ -372,6 +372,12 @@ void Emulator::parseCSI(const QStringRef& str) {
 }
 
 void Emulator::parseSGR(const QStringRef &str) {
+
+    if(str[0].toLatin1() == 'm') {
+        m_terminal->getTextFormat() = Terminal::defaultTextFormat;
+        return;
+    }
+
     int start = 0;
     if(!std::isdigit(str[start].toLatin1())) {
         qDebug() << "First digit of SGR opcode is not a number!";
@@ -393,6 +399,12 @@ void Emulator::parseSGR(const QStringRef &str) {
 
     if((op >= 30 && op <= 39) || (op >= 40 && op <= 49)) {
         parseColorOp(str.right(str.size() - end), op);
+    }
+
+    switch(op) {
+        case 0:
+            m_terminal->getTextFormat() = Terminal::defaultTextFormat;
+            break;
     }
 }
 
@@ -416,8 +428,6 @@ void Emulator::parseColorOp(const QStringRef &str, int op) {
                 qDebug() << "failed to parse 8 bit color code op!";
                 return;
             }
-            qDebug() << "STR: " << str;
-            qDebug() << "ColorCode: " << hex << colorCode;
             targetColorField = colors[colorCode];
         }
     }
