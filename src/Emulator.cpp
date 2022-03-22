@@ -284,6 +284,13 @@ void Emulator::parse(const QString &str) {
                     QStringRef ref(&str, start, end - start + 1);
                     parseCSI(ref);
                     i = end;
+                } else {
+                    printf("esc ");
+                    for(int j = i + 1; !std::isalpha(str[j].toLatin1()); j++) {
+                        printf("%c", str[j].toLatin1());
+                        fflush(stdout);
+                    }
+                    printf("\n");
                 }
                 break;
             }
@@ -365,7 +372,6 @@ void Emulator::parseCSI(const QStringRef& str) {
 }
 
 void Emulator::parseSGR(const QStringRef &str) {
-    qDebug() << "SGR " << str;
     int start = 0;
     if(!std::isdigit(str[start].toLatin1())) {
         qDebug() << "First digit of SGR opcode is not a number!";
@@ -395,13 +401,24 @@ void Emulator::parseColorOp(const QStringRef &str, int op) {
             (op >= 30 && op <= 39) ? m_terminal->getTextFormat().fg : m_terminal->getTextFormat().bg;
 
     int colorCode = op % 10;
-    qDebug() << "ColorCode: " << colorCode;
     if(colorCode < 8) {
         targetColorField = colors[colorCode];
     } else if(colorCode == 9) {
         targetColorField =
                 (op >= 30 && op <= 39) ? Terminal::defaultTextFormat.fg : Terminal::defaultTextFormat.bg;
     } else if(colorCode == 8) {
-        qDebug() << "We currently do not support non 3 bit colors!!!";
+        if(str.left(3) == ";5;") {
+            QStringRef colorIndexStr = str.right(str.size() - 3).chopped(1);
+
+            bool success;
+            colorCode = colorIndexStr.toInt(&success);
+            if(!success) {
+                qDebug() << "failed to parse 8 bit color code op!";
+                return;
+            }
+            qDebug() << "STR: " << str;
+            qDebug() << "ColorCode: " << hex << colorCode;
+            targetColorField = colors[colorCode];
+        }
     }
 }
