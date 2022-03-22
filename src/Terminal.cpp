@@ -13,9 +13,10 @@
 #include <qsize.h>
 #include <qtextcursor.h>
 #include <QScrollBar>
+#include "Emulator.h"
 
-Terminal::Terminal() : pty(nullptr){
-    resize(QSize(400, 300));
+Terminal::Terminal() : m_pty(nullptr), m_emulator(nullptr){
+    resize(QSize(800, 600));
 
     setAutoFillBackground(true);
     QPalette pal = palette();
@@ -40,45 +41,28 @@ Terminal::Terminal() : pty(nullptr){
     setLineWrapMode(LineWrapMode::NoWrap);
 
 
-    pty = new Pty(
+    m_pty = new Pty(
             getWidth(),
             getHeight(),
             "/bin/bash"
             );
 
-    QTimer *timer = new QTimer(this);
+    m_emulator = new Emulator(this);
+
+    QTimer* timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(updateTerminal()));
     timer->start(30);
 }
 
 Terminal::~Terminal() {
-
+    delete m_pty;
 }
 
 void Terminal::updateTerminal() {
     QString str = "";
-    if(pty->read(str) && str.length() > 0) {
-        for(auto ch : str) {
-            if(ch == 0x08) {
-                moveCursorLeft();
-                continue;
-
-            } else if(ch == '\a') {
-                //do nothing
-                continue;
-            } else if(ch == '\n') {
-                moveCursorDown();
-                continue;
-                //printf("newline\n");
-            } else if(ch == '\r') {
-                moveCursorToBeginning();
-                continue;
-            }
-            if(textCursor().columnNumber() >= getWidth()-1) {
-                replaceCharWith('\n');
-            }
-            replaceCharWith(ch);
-        }
+    if(m_pty->read(str) && str.length() > 0) {
+        qDebug() << str;
+        m_emulator->parse(str);
     }
 }
 
@@ -87,15 +71,15 @@ void Terminal::keyPressEvent(QKeyEvent *e) {
         replaceCharWith('\n');
     }
     if(e->key() >= 0x20 && e->key() <= 0x0de) {
-        pty->write(e->text());
+        m_pty->write(e->text());
     }
 
     if(e->key() == Qt::Key_Return || e->key() == Qt::Key_Enter) {
-        pty->write("\n");
+        m_pty->write("\n");
     }
 
     if(e->key() == Qt::Key_Backspace) {
-        pty->write("\b");
+        m_pty->write("\b");
     }
 
     switch (e->key()) {
@@ -112,7 +96,7 @@ void Terminal::keyPressEvent(QKeyEvent *e) {
 }
 
 void Terminal::resizeEvent(QResizeEvent* e) {
-    pty->resize(
+    m_pty->resize(
         getWidth(), 
         getHeight()
     );
@@ -151,16 +135,34 @@ void Terminal::moveCursorDown() {
     }
 }
 
-void Terminal::moveCursorToBeginning() {
+void Terminal::moveCursorToBeginningOfLine() {
     auto tc = textCursor();
-    tc.movePosition(QTextCursor::MoveOperation::StartOfBlock);
+    tc.movePosition(QTextCursor::MoveOperation::StartOfLine);
+    setTextCursor(tc);
+}
+
+void Terminal::moveCursorToEndOfLine() {
+    auto tc = textCursor();
+    tc.movePosition(QTextCursor::MoveOperation::EndOfLine);
+    setTextCursor(tc);
+}
+
+void Terminal::moveCursorToEnd() {
+    auto tc = textCursor();
+    tc.movePosition(QTextCursor::End);
     setTextCursor(tc);
 }
 
 void Terminal::replaceCharWith(QChar ch) {
     auto tc = textCursor();
+
+    auto charFormat = tc.charFormat();
+    charFormat.setForeground(QBrush(QColor((unsigned int)0xff000000 + m_textFormat.fg)));
+    charFormat.setBackground(QBrush(QColor((unsigned int)0xff000000 + m_textFormat.bg)));
+    charFormat.setFontItalic(getTextOp(Italic));
+    tc.setCharFormat(charFormat);
+
     if(!textCursor().atEnd()) {
-        //printf("not at end!\n");
         tc.movePosition(QTextCursor::MoveOperation::Right);
         setTextCursor(tc);
         tc.deletePreviousChar();
@@ -173,12 +175,73 @@ void Terminal::replaceCharWith(QChar ch) {
     }
 }
 
+void Terminal::clearFromCursorToEnd() {
+    int startPosition = textCursor().position();
+
+    moveCursorToEnd();
+
+    while(textCursor().position() != startPosition) {
+        auto tc = textCursor();
+        tc.deletePreviousChar();
+        setTextCursor(tc);
+    }
+
+}
+
+void Terminal::moveToLine(int line, bool moveAnchor) {
+    auto tc = textCursor();
+    tc.movePosition(QTextCursor::Start);
+    tc.movePosition(QTextCursor::Down, moveAnchor ? QTextCursor::MoveAnchor : QTextCursor::KeepAnchor, line - 1);
+    setTextCursor(tc);
+}
+
+void Terminal::deleteLine(int line) {
+    moveToLine(line, true);
+    auto tc = textCursor();
+    tc.select(QTextCursor::SelectionType::LineUnderCursor);
+    tc.removeSelectedText();
+    tc.deleteChar();
+    tc.deletePreviousChar();
+    setTextCursor(tc);
+}
+
+void Terminal::clearFromCursorToBeginning(bool deleteNewlines) {
+    int startCol = textCursor().columnNumber();
+    int startRow = textCursor().blockNumber();
+
+    int numLinesThatFillScreen = startRow < getHeight() ? startRow : getHeight();
+    int targetRow = textCursor().blockNumber() - numLinesThatFillScreen;
+
+    if(startRow < targetRow) {
+        qDebug() << "wait a moment! Start row is smaller than target row! I\'m pretty sure that\'s a bug!";
+    }
+
+
+    auto tc = textCursor();
+    qDebug() << "move down " << startRow - targetRow - 1<< " lines";
+    tc.movePosition(QTextCursor::EndOfLine, QTextCursor::MoveAnchor);
+    tc.movePosition(QTextCursor::StartOfLine, QTextCursor::KeepAnchor);
+    setTextCursor(tc);
+    tc.movePosition(QTextCursor::Up,QTextCursor::KeepAnchor, startRow - targetRow);
+    tc.removeSelectedText();
+    setTextCursor(tc);
+
+
+    if(!deleteNewlines) {
+        for(int i = 0; i < (startRow - targetRow); i++) {
+            insertPlainText("\n");
+        }
+    }
+}
+
+void Terminal::clearAll() {
+    clear();
+}
+
 unsigned short Terminal::getHeight() {
     return (int)viewport() -> height() / (int)fontMetrics().height();
 }
 
 unsigned short Terminal::getWidth() {
-    //printf("average char width: %d\n", fontMetrics().averageCharWidth());
     return (window()->size().width()) / fontMetrics().averageCharWidth();
-    //return 47;
 }

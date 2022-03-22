@@ -57,7 +57,7 @@ Pty::Pty(unsigned short width, unsigned short height, const char* shell)
         close(m_slave);
 
         const char* env[] = {
-                "TERM=dumb",
+                "TERM=xterm-256color",
                 NULL
         };
 
@@ -84,7 +84,7 @@ bool Pty::read(QString& str) {
         }
         return false;
     } else {
-        perror("ioctl() TIOCOUTQ!");
+        perror("ioctl() TIOCINQ!");
         return false;
     }
 
